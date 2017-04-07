@@ -548,6 +548,7 @@ sub main {
 	
 	# get seq_region_id hash
 	$config->{seq_region_ids} = get_seq_region_ids($config);
+	$config->{seq_region_synonyms} = get_seq_region_synonyms($config);
 	
 	# if failed, try and copy from core DB
 	if(!scalar keys %{$config->{seq_region_ids}}) {
@@ -736,8 +737,15 @@ sub main {
           next;
         }
       }
-			
-			if(!defined($config->{seq_region_ids}->{$data->{tmp_vf}->{chr}})) {
+      
+      # Use main seq_region, not a synonym
+      my $vf_chr = $data->{tmp_vf}->{chr};
+      if (exists $config->{seq_region_synonyms}->{$vf_chr}) {
+        $vf_chr = $config->{seq_region_synonyms}->{$vf_chr};
+        $data->{tmp_vf}->{chr} = $vf_chr;
+        $data->{'#CHROM'} = $vf_chr;
+      }
+			if(!defined( $config->{seq_region_ids}->{$vf_chr})) {
 				$config->{skipped}->{missing_seq_region}++;
 				$last_skipped++;
 				next;
@@ -1320,11 +1328,15 @@ sub connect_to_dbs {
 		}
 	
 		# connect to DB
-		my $vdba = $reg->get_DBAdaptor($config->{species},'variation')
+		my $vdba = $reg->get_DBAdaptor($config->{species}, 'variation')
 			|| usage( "Cannot find variation db for ".$config->{species}." in ".$config->{registry_file} );
 		$config->{dbVar} = $vdba->dbc->db_handle;
+		my $cdba = $reg->get_DBAdaptor($config->{species}, 'core')
+			|| usage( "Cannot find core db for ".$config->{species}." in ".$config->{registry_file} );
+		$config->{dbCore} = $cdba->dbc->db_handle;
 	
 		debug($config, "Connected to database ", $vdba->dbc->dbname, " on ", $vdba->dbc->host, " as user ", $vdba->dbc->username);
+		debug($config, "Connected to database ", $cdba->dbc->dbname, " on ", $cdba->dbc->host, " as user ", $cdba->dbc->username);
 	}
 }
 
@@ -1633,7 +1645,7 @@ sub store_session {
 # gets seq_region_id to chromosome mapping from DB
 sub get_seq_region_ids{
 	my $config = shift;
-	my $dbVar = $config->{dbVar};
+	my $dbVar  = $config->{dbVar};
 	
 	my ($seq_region_id, $chr_name, %seq_region_ids);
 	my $sth = $dbVar->prepare(qq{SELECT seq_region_id, name FROM seq_region});
@@ -1641,7 +1653,7 @@ sub get_seq_region_ids{
 	$sth->bind_columns(\$seq_region_id, \$chr_name);
 	$seq_region_ids{$chr_name} = $seq_region_id while $sth->fetch;
 	$sth->finish;
-	
+  
 	if(defined($config->{test})) {
 		debug($config, "Loaded ", scalar keys %seq_region_ids, " entries from seq_region table");
 	}
@@ -1649,7 +1661,25 @@ sub get_seq_region_ids{
 	return \%seq_region_ids;
 }
 
-
+sub get_seq_region_synonyms {
+	my $config = shift;
+	my $dbCore = $config->{dbCore};
+	
+	my ($name, $synonym, %seq_region_synonyms);
+  
+  # get the synonyms
+	my $sth = $dbCore->prepare(qq{SELECT name, synonym FROM seq_region_synonym LEFT JOIN seq_region USING(seq_region_id)});
+	$sth->execute;
+	$sth->bind_columns(\$name, \$synonym);
+	$seq_region_synonyms{$synonym} = $name while $sth->fetch;
+	$sth->finish;
+	
+	if(defined($config->{test})) {
+		debug($config, "Loaded ", scalar keys %seq_region_synonyms, " entries from seq_region_synonym table");
+	}
+	
+	return \%seq_region_synonyms;
+}
 
 # gets source_id - retrieves if name already exists, otherwise inserts
 sub get_source_id{
