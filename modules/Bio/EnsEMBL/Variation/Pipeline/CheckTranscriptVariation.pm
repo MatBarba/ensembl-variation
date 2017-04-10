@@ -104,7 +104,7 @@ sub get_new_results{
     $new{transcript_variation_count}  = count_results($dbc, $tv_count_st );
     unless($new{transcript_variation_count} > 0){  ## report & die if total failure
         $self->warning('ERROR: no transcript variation results found');
-        die;
+        die('ERROR: no transcript variation results found');
     }
 
     $new{missense_variant_count}   = count_results($dbc, $tot_missense_st );
