@@ -63,7 +63,7 @@ sub default_options {
         # the location of your ensembl checkout, the hive looks here for SQL files etc.
 
         ensembl_cvs_root_dir    => $ENV{'HOME'} . '/src',
-        hive_root_dir           => $ENV{'HOME'} . '/src/ensembl-hive',
+        hive_root_dir           => $self->o('ensembl_cvs_root_dir') . '/ensembl-hive',
         
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
@@ -92,11 +92,11 @@ sub default_options {
         # connection details for the hive's own database
 
         pipeline_db => {
-            -host   => 'mysql-ens-var-prod-1.ebi.ac.uk',
-            -port   => 4449,
-            -user   => 'ensadmin',
-            -pass   => $self->o('password'),            
-            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species') .'_hive',
+            -host   => $self->o('host') // 'mysql-ens-var-prod-1.ebi.ac.uk',
+            -port   => $self->o('port') // 4449,
+            -user   => $self->o('user') // 'ensadmin',
+            -pass   => $self->o('password'),
+            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species'),
             -driver => 'mysql',
         },
         
@@ -105,7 +105,7 @@ sub default_options {
         default_lsf_options => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
         medmem_lsf_options  => '-qproduction-rh7 -R"select[mem>8000] rusage[mem=8000]" -M8000',
         urgent_lsf_options  => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
-        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>16000] rusage[mem=16000]" -M16000', # this is Sanger LSF speak for "give me 15GB of memory"
+        highmem_lsf_options => '-qproduction-rh7 -R"select[mem>16000] rusage[mem=16000]" -M16000',
         long_lsf_options    => '-qproduction-rh7 -R"select[mem>2000] rusage[mem=2000]" -M2000',
 
         # Polyphen specific parameters
