@@ -35,6 +35,7 @@ use warnings;
 use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 use Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::Constants qw(FULL UPDATE NONE);
+use File::Spec::Functions qw(catfile catdir);
 
 sub default_options {
     my ($self) = @_;
@@ -68,22 +69,22 @@ sub default_options {
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
-        species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
+        species                 => undef,
+        species_list            => [],
+        
+        #species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
         # directory used for the hive's own output files
 
-        output_dir              => $self->o('species_dir').'/hive_output',
+        #output_dir              => $self->o('species_dir').'/hive_output',
 
         # this registry file should contain connection details for the core, variation
         # and compara databases (if you are using compara alignments). If you are
         # doing an UPDATE run for either sift or polyphen, the variation database
         # should have existing predictions in the protein_function_predictions table
 
-        ensembl_registry        => $self->o('species_dir').'/ensembl.registry',
-
-        # peptide sequences for all unique translations for this species will be dumped to this file
-
-        fasta_file              => $self->o('species_dir').'/'.$self->o('species').'_translations.fa',
+        #ensembl_registry        => $self->o('species_dir').'/ensembl.registry',
+        ensembl_registry => undef,
         
         # set this flag to include LRG translations in the analysis
 
@@ -96,7 +97,7 @@ sub default_options {
             -port   => $self->o('port') // 4449,
             -user   => $self->o('user') // 'ensadmin',
             -pass   => $self->o('password'),
-            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name').'_'. $self->o('species'),
+            -dbname => $ENV{USER}.'_'.$self->o('pipeline_name'),
             -driver => 'mysql',
         },
         
@@ -116,7 +117,7 @@ sub default_options {
 
         # where we will keep polyphen's working files etc. as the pipeline runs
 
-        pph_working             => $self->o('species_dir').'/polyphen_working',
+        pph_working => undef,
         
         # specify the Weka classifier models here, if you don't want predictions from 
         # one of the classifier models set the value to the empty string
@@ -152,7 +153,7 @@ sub default_options {
 
         sift_dir                => '/nfs/panda/ensemblgenomes/external/sift',
 
-        sift_working            => $self->o('species_dir').'/sift_working',
+        sift_working            => undef,
         
         # the location of blastpgp etc.
 
@@ -192,17 +193,35 @@ sub resource_classes {
     };
 }
 
+sub beekeeper_extra_cmdline_options {
+    my $self = shift;
+    return "-reg_conf " . $self->o("ensembl_registry");
+}
+
 sub pipeline_analyses {
     my ($self) = @_;
     
     my @common_params = (
-        fasta_file          => $self->o('fasta_file'),
         ensembl_registry    => $self->o('ensembl_registry'),
-        species             => $self->o('species'),
         debug_mode          => $self->o('debug_mode'),
+        fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
     );
 
     return [
+        {   -logic_name => 'species_factory',
+            -module     => 'Bio::EnsEMBL::Production::Pipeline::SpeciesFactory',
+            -parameters => {
+                db_types => [ 'variation' ],
+                species  => $self->o('species_list') || [$self->o('species')],
+            },
+            -meadow_type       => 'LOCAL',
+            -input_ids  => [{}],
+            -rc_name    => 'default',
+            -flow_into  => {
+                2 => [ 'init_jobs' ],
+            },
+        },
+      
         {   -logic_name => 'init_jobs',
             -module     => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::InitJobs',
             -parameters => {
@@ -214,7 +233,7 @@ sub pipeline_analyses {
                 blastdb         => $self->o('blastdb'),
                 @common_params,
             },
-            -input_ids  => [{}],
+            -input_ids  => [],
             -rc_name    => 'highmem',
             -flow_into  => {
                 2 => [ 'run_polyphen' ],
@@ -226,7 +245,7 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunPolyPhen',
             -parameters     => {
                 pph_dir     => $self->o('pph_dir'),
-                pph_working => $self->o('pph_working'),
+                pph_working    => catdir($self->o('pipeline_dir'), '#species#', 'pph_working'),
                 use_compara => $self->o('pph_use_compara'),
                 @common_params,
             },
@@ -258,7 +277,7 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunSift',
             -parameters     => {
                 sift_dir        => $self->o('sift_dir'),
-                sift_working    => $self->o('sift_working'),
+                sift_working    => catdir($self->o('pipeline_dir'), '#species#', 'sift_working'),
                 ncbi_dir        => $self->o('ncbi_dir'),
                 blastdb         => $self->o('blastdb'),
                 use_compara     => $self->o('sift_use_compara'),
@@ -278,7 +297,7 @@ sub pipeline_analyses {
             -module         => 'Bio::EnsEMBL::Variation::Pipeline::ProteinFunction::RunSift',
             -parameters     => {
                 sift_dir        => $self->o('sift_dir'),
-                sift_working    => $self->o('sift_working'),
+                sift_working    => catdir($self->o('pipeline_dir'), '#species#', 'sift_working'),
                 ncbi_dir        => $self->o('ncbi_dir'),
                 blastdb         => $self->o('blastdb'),
                 use_compara     => $self->o('sift_use_compara'),
