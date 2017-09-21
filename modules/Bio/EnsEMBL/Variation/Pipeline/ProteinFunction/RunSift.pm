@@ -235,6 +235,7 @@ sub run {
         or die "Failed to get matrix adaptor";
     
       $pfpma->store($pred_matrix);
+      $self->dbc->disconnect_if_idle();
     }
   }
 
