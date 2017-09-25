@@ -69,10 +69,7 @@ sub default_options {
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
-        species                 => undef,
         species_list            => [],
-        
-        #species_dir             => $self->o('pipeline_dir').'/'.$self->o('species'),
         
         # directory used for the hive's own output files
 
@@ -204,7 +201,6 @@ sub pipeline_analyses {
     my @common_params = (
         ensembl_registry    => $self->o('ensembl_registry'),
         debug_mode          => $self->o('debug_mode'),
-        fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
     );
 
     return [
@@ -212,7 +208,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Production::Pipeline::SpeciesFactory',
             -parameters => {
                 db_types => [ 'variation' ],
-                species  => $self->o('species_list') || [$self->o('species')],
+                species  => $self->o('species_list'),
             },
             -meadow_type       => 'LOCAL',
             -input_ids  => [{}],
@@ -231,8 +227,11 @@ sub pipeline_analyses {
                 polyphen_dir    => $self->o('pph_dir'),
                 sift_dir        => $self->o('sift_dir'),                
                 blastdb         => $self->o('blastdb'),
+                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
+            -max_retry_count => 0,
+            -hive_capacity  => 10,
             -input_ids  => [],
             -rc_name    => 'highmem',
             -flow_into  => {
@@ -247,6 +246,7 @@ sub pipeline_analyses {
                 pph_dir     => $self->o('pph_dir'),
                 pph_working    => catdir($self->o('pipeline_dir'), '#species#', 'pph_working'),
                 use_compara => $self->o('pph_use_compara'),
+                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -max_retry_count => 0,
@@ -264,6 +264,7 @@ sub pipeline_analyses {
                 pph_dir         => $self->o('pph_dir'),
                 humdiv_model    => $self->o('humdiv_model'),
                 humvar_model    => $self->o('humvar_model'),
+                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -max_retry_count => 0,
@@ -281,10 +282,12 @@ sub pipeline_analyses {
                 ncbi_dir        => $self->o('ncbi_dir'),
                 blastdb         => $self->o('blastdb'),
                 use_compara     => $self->o('sift_use_compara'),
+                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -failed_job_tolerance => 10,
-            -max_retry_count => 5,
+            -max_retry_count => 0,
+            -max_retry_count => 0,
             -input_ids      => [],
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
