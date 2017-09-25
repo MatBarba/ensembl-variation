@@ -192,6 +192,9 @@ sub fetch_input {
     }
 
     close $FASTA;
+    
+    # Regenerate fasta index
+    `samtools faidx $fasta`;
 
     # set up our list of output ids
 
