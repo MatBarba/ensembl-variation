@@ -32,6 +32,7 @@ package Bio::EnsEMBL::Variation::Pipeline::TranscriptFileAdaptor;
 use strict;
 
 use Digest::MD5 qw(md5_hex);
+use File::Temp;
 
 sub new {
     my $class = shift;
@@ -59,6 +60,8 @@ sub get_translation_seq {
     $fasta =~ s/>.*\n//m;
     $fasta =~ s/\s//mg;
 
+    die "Translation for $translation_md5 is empty" if length($fasta) == 0;
+
     return $fasta;
 }
 
@@ -67,7 +70,16 @@ sub get_translation_fasta {
     
     my $file = $self->{fasta_file};
     
-    my $fasta = `samtools faidx $file $translation_md5`;
+    my $stderr_file = File::Temp->new();
+    my $fasta = `samtools faidx $file $translation_md5 2> $stderr_file`;
+    
+    if (-s $stderr_file->filename) {
+      my $error;
+      while (my $line = readline($stderr_file)) {
+        $error .= $line;
+      }
+      die "Sequence retrieval failed from $translation_md5 in $file: [$error]";
+    }
 
     return $fasta;
 }
