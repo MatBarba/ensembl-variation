@@ -105,6 +105,7 @@ sub run {
       }
     }
     else {
+      $self->dbc->disconnect_if_idle();
 
       # do the alignment ourselves
       
@@ -136,12 +137,25 @@ sub run {
         $alignment_ok = 1;
       }
       else {
+        # If we just did not find enough hits, that's ok, just skip this
+        my $error_file = $fasta_file . ".query.globalX.error";
+        if (-s $error_file) {
+          open my $error_fh, "<", $error_file or die $!;
+          my $error_msg = <$error_fh>;
+          close $error_fh;
+          chomp $error_msg;
+          if ($error_msg =~ /Not enough sequences \(only \d\) found by the PSI-BLAST search!|PSI-BLAST found no hits/) {
+            return;
+          }
+          die("Failed to run $translation_md5 with $flat_cmd: error $exit_code. Message: [$error_msg]. Stderr: [$stderr]\n");
+        }
         # the alignment failed for some reason, what to do?
         die "Alignment for $translation_md5 failed - cmd: $flat_cmd: $stderr";
         $alignment_ok = 0;
       }
     }
   }
+  $self->dbc->disconnect_if_idle();
 
   if ($alignment_ok) {
 
@@ -176,7 +190,23 @@ sub run {
     my $cmd = "$sift_dir/bin/info_on_seqs $aln_file $subs_file $res_file";
     my ($exit_code, $stderr, $flat_cmd) = $self->run_system_command($cmd);
 
-    die("Failed to run $flat_cmd: $stderr\n") unless $exit_code == 0;
+    if ($exit_code != 0) {
+      # If there was not enough sequences selected, skip it
+      my $error_file = "protein.alignedfasta.error";
+      if (-s $error_file) {
+        open my $error_fh, "<", $error_file or die $!;
+        my $error_msg = <$error_fh>;
+        close $error_fh;
+        chomp $error_msg;
+        if ($error_msg =~ /\d sequence\(s\) were chosen\. Less than the minimum number of sequences required/) {
+          return;
+        }
+        die("Failed to run $translation_md5 with $flat_cmd: error $exit_code. Message: [$error_msg]. Stderr: [$stderr]\n");
+      }
+      
+      # Otherwise die with a reason
+      die("Failed to run for $translation_md5 with $flat_cmd: error $exit_code = [$stderr]\n");
+    }
 
     $self->dbc->disconnect_when_inactive(0);
 
@@ -235,7 +265,7 @@ sub run {
         or die "Failed to get matrix adaptor";
     
       $pfpma->store($pred_matrix);
-      $self->dbc->disconnect_if_idle();
+      $var_dba->dbc->disconnect_if_idle();
     }
   }
 
