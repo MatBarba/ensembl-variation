@@ -201,6 +201,7 @@ sub pipeline_analyses {
     my @common_params = (
         ensembl_registry    => $self->o('ensembl_registry'),
         debug_mode          => $self->o('debug_mode'),
+        fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
     );
 
     return [
@@ -227,7 +228,6 @@ sub pipeline_analyses {
                 polyphen_dir    => $self->o('pph_dir'),
                 sift_dir        => $self->o('sift_dir'),                
                 blastdb         => $self->o('blastdb'),
-                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -max_retry_count => 0,
@@ -246,7 +246,6 @@ sub pipeline_analyses {
                 pph_dir     => $self->o('pph_dir'),
                 pph_working    => catdir($self->o('pipeline_dir'), '#species#', 'pph_working'),
                 use_compara => $self->o('pph_use_compara'),
-                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -max_retry_count => 0,
@@ -264,7 +263,6 @@ sub pipeline_analyses {
                 pph_dir         => $self->o('pph_dir'),
                 humdiv_model    => $self->o('humdiv_model'),
                 humvar_model    => $self->o('humvar_model'),
-                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -max_retry_count => 0,
@@ -282,7 +280,6 @@ sub pipeline_analyses {
                 ncbi_dir        => $self->o('ncbi_dir'),
                 blastdb         => $self->o('blastdb'),
                 use_compara     => $self->o('sift_use_compara'),
-                fasta_file          => catfile($self->o('pipeline_dir'), '#species#', '#species#_translations.fa'),
                 @common_params,
             },
             -failed_job_tolerance => 10,
