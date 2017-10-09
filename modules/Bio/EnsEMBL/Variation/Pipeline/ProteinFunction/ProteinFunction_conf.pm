@@ -69,7 +69,7 @@ sub default_options {
         pipeline_name           => 'protein_function',
         pipeline_dir            => '/hps/nobackup/production/ensembl/'.$ENV{USER}.'/'.$self->o('pipeline_name'),
         
-        species_list            => [],
+        species                 => [],
         
         # directory used for the hive's own output files
 
@@ -209,7 +209,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Production::Pipeline::SpeciesFactory',
             -parameters => {
                 db_types => [ 'variation' ],
-                species  => $self->o('species_list'),
+                species  => $self->o('species'),
             },
             -meadow_type       => 'LOCAL',
             -input_ids  => [{}],

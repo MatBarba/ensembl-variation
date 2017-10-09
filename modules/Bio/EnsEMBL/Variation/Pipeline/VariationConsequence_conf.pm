@@ -55,7 +55,7 @@ sub default_options {
     return {
       
         # List of species to use
-        species_list => [],
+        species => [],
 
         # general pipeline options that you should change to suit your environment
        
@@ -213,7 +213,7 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Production::Pipeline::SpeciesFactory',
       -parameters => {
         db_types => [ 'variation' ],
-        species  => $self->o('species_list'),
+        species  => $self->o('species'),
       },
       -meadow_type       => 'LOCAL',
       -max_retry_count => 0,
