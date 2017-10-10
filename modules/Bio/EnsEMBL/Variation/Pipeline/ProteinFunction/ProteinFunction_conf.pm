@@ -220,6 +220,7 @@ sub pipeline_analyses {
             -meadow_type       => 'LOCAL',
             -input_ids  => [{}],
             -rc_name    => 'default',
+            -max_retry_count => 0,
             -flow_into  => {
                 2 => [ 'init_jobs' ],
             },
@@ -235,6 +236,7 @@ sub pipeline_analyses {
                 blastdb         => $self->o('blastdb'),
                 @common_params,
             },
+            -max_retry_count => 0,
             -rc_name    => 'highmem',
             -flow_into  => {
                 2 => [ 'run_polyphen' ],
@@ -251,7 +253,6 @@ sub pipeline_analyses {
                 @common_params,
             },
             -max_retry_count => 0,
-            -input_ids      => [],
             -hive_capacity  => $self->o('pph_max_workers'),
             -rc_name        => 'highmem',
             -flow_into      => {
@@ -268,10 +269,8 @@ sub pipeline_analyses {
                 @common_params,
             },
             -max_retry_count => 0,
-            -input_ids      => [],
             -hive_capacity  => $self->o('weka_max_workers'),
             -rc_name        => 'default',
-            -flow_into      => {},
         },
         
         {   -logic_name     => 'run_sift',
@@ -285,8 +284,7 @@ sub pipeline_analyses {
                 @common_params,
             },
             -failed_job_tolerance => 10,
-            -max_retry_count => 5,
-            -input_ids      => [],
+            -max_retry_count => 0,
             -hive_capacity  => $self->o('sift_max_workers'),
             -rc_name        => 'medmem',
             -flow_into      => {
@@ -304,7 +302,7 @@ sub pipeline_analyses {
                 use_compara     => $self->o('sift_use_compara'),
                 @common_params,
             },
-            -input_ids      => [],
+            -max_retry_count => 0,
             -rc_name        => 'highmem',
         },
 
